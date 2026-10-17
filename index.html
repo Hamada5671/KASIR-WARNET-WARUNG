@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARENA 27 NET</title>
+
+<link rel="stylesheet" href="assets/theme.css">
+<style>
+.head-tools{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+#shiftSwitch{display:flex;gap:6px}
+#shiftSwitch button{min-height:34px;padding:0 11px}
+#shiftSwitch button[disabled]{opacity:.45;pointer-events:none}
+.card h2{font-size:19px}
+#inputCard{border-top:1px solid rgba(255,122,184,.5)}
+@media(max-width:700px){.head-tools{width:100%;justify-content:space-between}#shiftSwitch{flex:1}}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <div class="logo">
+            <div class="logo-icon" role="img" aria-label="Logo Arena 27 Net">
+                <svg viewBox="0 0 64 64" aria-hidden="true">
+                    <path d="M32 5 53 13v16c0 14-8 23-21 30C19 52 11 43 11 29V13L32 5Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                    <text x="32" y="34" text-anchor="middle" fill="currentColor" font-family="Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="-1">A27</text>
+                    <path d="M21 40h22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    <text x="32" y="49" text-anchor="middle" fill="currentColor" font-family="Arial,sans-serif" font-size="6" font-weight="700" letter-spacing="1.1">ARENA NET</text>
+                </svg>
+            </div>
+            <div>
+                <div class="logo-title">ARENA 27 NET</div>
+                <div class="logo-sub">reguler · vip · vvip</div>
+                        </div>
+
+        </div>
+
+        <div class="head-tools">
+            <div class="who"><span class="dot"></span><span>Jaga sebagai</span><b id="whoName">Shift Siang</b></div>
+            <div id="shiftSwitch">
+                <button class="btn-ghost" type="button" data-shift="SIANG" onclick="switchShift('SIANG')">Siang</button>
+                <button class="btn-ghost" type="button" data-shift="MALAM" onclick="switchShift('MALAM')">Malam</button>
+                <button class="btn-ghost" type="button" data-shift="OWNER" onclick="switchShift('OWNER')">Owner</button>
+            </div>
+            <button class="btn-ghost" type="button" onclick="leaveSession()">Keluar</button>
+            <a class="stock-link" href="stock.html">Stok &amp; rokok</a>
+        </div>
+
+    </div>
+
+
+    <!-- IDENTITAS -->
+
+    <div class="card">
+
+        <div class="grid">
+
+            <div class="field">
+                <label>PETUGAS JAGA</label>
+                <input id="staff" placeholder="GILANG" oninput="saveIdent()">
+            </div>
+
+            <div class="field">
+                <label>TANGGAL LAPORAN</label>
+                <input id="tanggal" type="date" onchange="saveIdent();render()">
+            </div>
+
+            
+
+        </div>
+        <p class="settings-note" style="margin:10px 0 0;">Pilih tanggal buat melihat, mencatat, atau mengunduh laporan hari itu. Data Siang dan Malam dipisah, Owner lihat gabungan keduanya.</p>
+
+    </div>
+
+    <details class="card settings">
+        <summary>Harga PC</summary>
+        <div class="settings-body">
+            <p class="settings-intro">Isi harga standar tiap klas PC. PC yang tarifnya beda ditulis harga khususnya di kolom bawah. Klik tombol PC buat mengisi nama dan nominal sekaligus.</p>
+            <div class="price-grid">
+                <div class="field"><label>DEFAULT REGULER</label><input id="priceREGULER" type="number" min="0" placeholder="Belum diatur"></div>
+                <div class="field"><label>DEFAULT VIP</label><input id="priceVIP" type="number" min="0" placeholder="Belum diatur"></div>
+                <div class="field"><label>DEFAULT VVIP</label><input id="priceVVIP" type="number" min="0" placeholder="Belum diatur"></div>
+            </div>
+            <div class="field">
+                <label>HARGA KHUSUS PER PC</label>
+                <textarea id="pcPrices" placeholder="Contoh:&#10;REG 01=4000&#10;VIP 03=6000&#10;VVIP 01=8000"></textarea>
+                <p class="settings-note">Satu PC satu baris, formatnya NAMA PC=HARGA. Harga khusus menang atas harga standar.</p>
+            </div>
+            <button class="settings-save" onclick="savePrices()">Simpan pengaturan</button>
+        </div>
+    </details>
+
+    <!-- INPUT CEPAT -->
+
+    <div class="card" id="inputCard">
+
+        <h2 class="serif">Sesi baru</h2>
+
+        <div class="grid">
+
+            <div class="field">
+                <label>KLAS PC</label>
+                <div class="seg" id="segKat">
+                    <button class="active" onclick="setKat('REGULER',this)">REGULER</button>
+                    <button onclick="setKat('VIP',this)">VIP</button>
+                    <button onclick="setKat('VVIP',this)">VVIP</button>
+                </div>
+            </div>
+
+            <div class="field" style="grid-column:span 2">
+                <label>NAMA PC / TAMU</label>
+                <input id="nama" placeholder="REG 02 / FAISAL" onchange="isiHargaNama()" onkeydown="if(event.key==='Enter')addEntry()">
+                <div class="chips" id="chips"></div>
+            </div>
+
+            <div class="field">
+                <label>TAGIHAN</label>
+                <input id="nominal" type="number" placeholder="4000" oninput="hitungKembalian()">
+            </div>
+
+            <div class="field">
+                <label>PEMBAYARAN</label>
+                <div class="seg" id="segBayar">
+                    <button class="cash active" onclick="setBayar('CASH',this)">CASH</button>
+                    <button class="qris" onclick="setBayar('QRIS',this)">QRIS</button>
+                </div>
+            </div>
+
+            <div class="field" id="bayarField">
+                <label>UANG DITERIMA</label>
+                <input id="bayar" type="number" placeholder="5000" oninput="hitungKembalian()">
+            </div>
+
+            <div class="field">
+                <label>&nbsp;</label>
+                <button class="add-btn" onclick="addEntry()">Tambah sesi</button>
+            </div>
+
+        </div>
+
+        <div class="hint" id="kembalianHint"></div>
+        <p class="settings-note" style="margin:6px 0 0;">Uang kembalian cuma bantu hitung di meja, tidak ikut tersimpan atau masuk laporan.</p>
+
+    </div>
+
+
+    <!-- DAFTAR -->
+
+    <div class="card">
+
+        <h2 class="serif" id="listTitle">Sesi tercatat</h2>
+        <div class="list-tools">
+            <input id="entrySearch" type="search" placeholder="Cari nama atau PC…" oninput="render()" aria-label="Cari sesi">
+            <span class="list-count" id="entryCount">0 sesi</span>
+        </div>
+
+        <div class="cols">
+
+            <div class="grp">
+                <h3>REGULER</h3>
+                <div id="listREGULER"></div>
+            </div>
+
+            <div class="grp">
+                <h3>VIP</h3>
+                <div id="listVIP"></div>
+            </div>
+
+            <div class="grp">
+                <h3>VVIP</h3>
+                <div id="listVVIP"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- TOTALS -->
+
+    <div class="card">
+
+        <div class="totals">
+
+            <div class="tot">
+                <div class="lbl">TOTAL CASH</div>
+                <div class="val" id="totCash">0</div>
+            </div>
+
+            <div class="tot warm">
+                <div class="lbl">TOTAL QRIS</div>
+                <div class="val" id="totQris">0</div>
+            </div>
+
+            <div class="tot">
+                <div class="lbl">TOTAL SEMUA</div>
+                <div class="val" id="totSemua">0</div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- EXPORT -->
+
+    <div class="card">
+
+        <h2 class="serif">Kirim laporan</h2>
+
+        <div class="export">
+
+            <button class="primary" onclick="copyTsv()">Copy buat Excel</button>
+
+            <button onclick="downloadXls()">Unduh .xls</button>
+
+            <button onclick="window.print()">Cetak / PDF</button>
+
+            <button class="danger" id="resetButton" onclick="resetHarian()">Kosongkan shift ini</button>
+
+        </div>
+        <div class="backup-actions">
+            <button type="button" onclick="downloadBackup()">Cadangkan data</button>
+            <button type="button" onclick="document.getElementById('backupFile').click()">Pulihkan cadangan</button>
+            <input id="backupFile" type="file" accept="application/json,.json" hidden onchange="restoreBackup(event)">
+        </div>
+        <p class="settings-note" style="margin:9px 0 0">File cadangan berisi laporan kasir dan harga PC di komputer ini. Simpan di folder yang aman.</p>
+
+    </div>
+
+</div>
+
+
+<!-- AREA CETAK -->
+
+<div id="printArea"></div>
+
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/anime-bg.js"></script>
+<script src="assets/auth.js"></script>
+<script>
+
+/* ================= DATA ================= */
+
+let entries = [];
+let kat  = "REGULER";
+let bayar= "CASH";
+const session = ArenaAuth.session();
+if(!session) location.replace("login.html");
+let activeShift = session ? session.account : "SIANG";
+
+function todayKey(){
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+}
+
+try{
+    entries = JSON.parse(localStorage.getItem("billing_entries")) || [];
+    const legacyDate = localStorage.getItem("billing_tgl");
+    let migrated = false;
+    entries.forEach(e => {
+        if(!e.shift) e.shift = "SIANG";
+        if(!e.date){
+            e.date = legacyDate || todayKey();
+            migrated = true;
+        }
+    });
+    if(migrated){
+        try{ localStorage.setItem("billing_entries", JSON.stringify(entries)); }catch(e){}
+    }
+}catch(e){ entries = []; }
+
+function scopedEntries(){
+    const selectedDate = document.getElementById("tanggal").value;
+    return entries.filter(e =>
+        e.date === selectedDate &&
+        (activeShift === "OWNER" || (e.shift || "SIANG") === activeShift)
+    );
+}
+
+function applyShift(){
+    const staff = document.getElementById("staff");
+    staff.value = activeShift === "OWNER"
+        ? "OWNER"
+        : (localStorage.getItem("billing_staff_" + activeShift) || (session && session.username) || "");
+    staff.readOnly = activeShift === "OWNER";
+    document.getElementById("inputCard").style.display = activeShift === "OWNER" ? "none" : "";
+    document.getElementById("resetButton").style.display = activeShift === "OWNER" ? "none" : "";
+    document.getElementById("whoName").textContent = ArenaAuth.LABELS[activeShift];
+    document.querySelectorAll("#shiftSwitch button").forEach(b => {
+        const on = b.dataset.shift === activeShift;
+        b.classList.toggle("on", on);
+        b.disabled = on;
+    });
+    render();
+}
+
+function switchShift(account){
+    localStorage.setItem("arena27_last_shift", account);
+    location.replace("login.html?switch=1&as=" + account);
+}
+
+function leaveSession(){
+    ArenaAuth.signOut();
+    location.replace("login.html");
+}
+
+function saveAll(){
+    try{
+        localStorage.setItem("billing_entries", JSON.stringify(entries));
+        return true;
+    }catch(e){
+        alert("Gagal menyimpan. Data belum diperbarui di browser.");
+        return false;
+    }
+}
+
+function saveIdent(){
+    if(activeShift !== "OWNER"){
+        localStorage.setItem("billing_staff_" + activeShift, document.getElementById("staff").value);
+    }
+    localStorage.setItem("billing_tgl", document.getElementById("tanggal").value);
+}
+
+
+/* ================= SETUP ================= */
+
+const CHIPS = {
+    "REGULER":["REG 01","REG 02","REG 03","REG 04","REG 05","REG 06","REG 07","REG 08","REG 09","REG 10","REG 11"],
+    "VIP":    ["VIP 01","VIP 02","VIP 03","VIP 04","VIP 05"],
+    "VVIP":   ["VVIP 01","VVIP 02"]
+};
+
+let priceSettings = {defaults:{}, pc:{}};
+try{
+    priceSettings = JSON.parse(localStorage.getItem("billing_prices")) || priceSettings;
+}catch(e){}
+
+function initPrices(){
+    ["REGULER","VIP","VVIP"].forEach(k => {
+        const field = document.getElementById("price" + k);
+        field.value = priceSettings.defaults[k] || "";
+    });
+    document.getElementById("pcPrices").value = Object.entries(priceSettings.pc)
+        .map(([name, price]) => `${name}=${price}`).join("\n");
+}
+
+function savePrices(){
+    const defaults = {};
+    ["REGULER","VIP","VVIP"].forEach(k => {
+        const value = document.getElementById("price" + k).value;
+        defaults[k] = value === "" ? null : Number(value);
+    });
+    if(Object.values(defaults).some(value=>value!==null&&(!Number.isFinite(value)||value<0))){
+        alert("Harga default harus berupa angka nol atau lebih.");
+        return;
+    }
+
+    const pc = {};
+    const lines = document.getElementById("pcPrices").value.split(/\n/);
+    for(const line of lines){
+        if(!line.trim()) continue;
+        const match = line.match(/^(.+?)\s*=\s*(\d+)$/);
+        if(!match){
+            alert("Format harga PC belum benar. Gunakan NAMA PC=HARGA, satu PC per baris.");
+            return;
+        }
+        const price = Number(match[2]);
+        if(!match[1].trim() || !Number.isFinite(price)){
+            alert("Nama PC dan harga harus diisi dengan benar.");
+            return;
+        }
+        pc[match[1].trim().toUpperCase()] = price;
+    }
+
+    const previous = priceSettings;
+    priceSettings = {defaults, pc};
+    try{
+        localStorage.setItem("billing_prices", JSON.stringify(priceSettings));
+        toast("Pengaturan harga berhasil disimpan.");
+    }catch(e){
+        priceSettings = previous;
+        alert("Pengaturan gagal disimpan di browser.");
+    }
+}
+
+function pilihPc(name){
+    document.getElementById("nama").value = name;
+    isiHargaNama();
+}
+
+function isiHargaNama(){
+    const name = document.getElementById("nama").value.trim().toUpperCase();
+    const price = priceSettings.pc[name] ?? priceSettings.defaults[kat];
+    if(price !== null && price !== undefined && price !== ""){
+        document.getElementById("nominal").value = price;
+        hitungKembalian();
+    }
+}
+
+function setKat(k, btn){
+
+    kat = k;
+
+    document.querySelectorAll("#segKat button")
+        .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+
+    renderChips();
+
+}
+
+function setBayar(b, btn){
+
+    bayar = b;
+
+    document.querySelectorAll("#segBayar button")
+        .forEach(x => x.classList.remove("active"));
+
+    btn.classList.add("active");
+
+    document.getElementById("bayarField").style.display =
+        b === "CASH" ? "block" : "none";
+
+    hitungKembalian();
+
+}
+
+
+function renderChips(){
+
+    document.getElementById("chips").innerHTML =
+        CHIPS[kat].map(c =>
+            `<button onclick="pilihPc('${c}')">${c}</button>`
+        ).join("");
+
+}
+
+/* ================= TAMBAH / HAPUS ================= */
+
+function addEntry(){
+
+    if(activeShift === "OWNER") return;
+
+    const nama    = document.getElementById("nama").value.trim().toUpperCase();
+    const nominal = Number(document.getElementById("nominal").value);
+    
+
+        if(!nama || !Number.isFinite(nominal) || nominal <= 0 || !document.getElementById("tanggal").value){
+        alert("Isi tanggal, nama/PC, dan nominal dengan benar.");
+        return;
+    }
+
+
+    entries.push({
+        id: Date.now() + "" + Math.floor(Math.random()*999),
+        kat,
+        shift: activeShift,
+        date: document.getElementById("tanggal").value,
+        nama,
+        nominal,
+        bayarM: bayar
+    });
+
+    if(!saveAll()){
+        entries.pop();
+        return;
+    }
+
+    document.getElementById("nama").value    = "";
+    document.getElementById("nominal").value = "";
+    document.getElementById("bayar").value   = "";
+
+    document.getElementById("kembalianHint").textContent = "";
+
+    render();
+
+}
+
+
+function delEntry(id){
+    const entry = entries.find(e => e.id === id);
+    if(!entry || !confirm(`Hapus sesi ${entry.nama} senilai ${fmt(entry.nominal)}?`)) return;
+    const previous = entries;
+    entries = entries.filter(e => e.id !== id);
+    if(!saveAll()) entries = previous;
+    render();
+}
+
+/* ================= KEMBALIAN ================= */
+
+function hitungKembalian(){
+
+    const nominal = Number(document.getElementById("nominal").value) || 0;
+    const terima  = Number(document.getElementById("bayar").value)   || 0;
+
+    const h = document.getElementById("kembalianHint");
+
+    if(bayar !== "CASH" || !terima || !nominal){
+        h.textContent = "";
+        return;
+    }
+
+    h.textContent =
+        terima >= nominal
+        ? "→ Kembalian: " + fmt(terima - nominal)
+        : "⚠ Uang diterima kurang " + fmt(nominal - terima);
+
+}
+
+/* ================= FORMAT ================= */
+
+function fmt(n){
+    return Math.round(n).toLocaleString("id-ID");
+}
+
+
+function tanggalLabel(){
+
+    const v = document.getElementById("tanggal").value;
+
+    if(!v) return "-";
+
+    const d = new Date(v + "T00:00:00");
+
+    return d.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}).toUpperCase();
+
+}
+
+/* ================= RENDER ================= */
+
+function render(){
+
+    const shownEntries = scopedEntries();
+    document.getElementById("listTitle").textContent = activeShift === "OWNER"
+        ? "Ringkasan semua shift — " + tanggalLabel()
+        : "Daftar sesi — " + tanggalLabel() + " · Shift " + activeShift;
+
+    const search = document.getElementById("entrySearch").value.trim().toLocaleLowerCase("id-ID");
+    const visibleEntries = search
+        ? shownEntries.filter(e => String(e.nama).toLocaleLowerCase("id-ID").includes(search))
+        : shownEntries;
+    document.getElementById("entryCount").textContent = search
+        ? `${visibleEntries.length} dari ${shownEntries.length} sesi`
+        : `${shownEntries.length} sesi`;
+
+    ["REGULER","VIP","VVIP"].forEach(k => {
+
+        const box  = document.getElementById("list" + k);
+        const list = visibleEntries.filter(e => e.kat === k);
+
+
+        box.innerHTML = list.length === 0
+            ? `<div class="none">belum ada sesi</div>`
+            : list.map((e,i) => {
+
+                return `
+
+                <div class="entry">
+
+                    <span class="no">${i+1}.</span>
+
+                    <span class="nm">${esc(e.nama)}</span>
+
+                    <span class="pay">
+                        <b>${fmt(e.nominal)}</b> ${e.bayarM}
+                        ${activeShift === "OWNER" ? `<div class="kembali">Shift ${esc(e.shift || "SIANG")}</div>` : ""}
+                    </span>
+
+                    ${activeShift === "OWNER" ? "" : `<button class="del" onclick="delEntry('${e.id}')">×</button>`}
+
+                </div>`;
+
+            }).join("");
+
+    });
+
+
+    let cash = 0, qris = 0;
+
+    shownEntries.forEach(e => {
+        if(e.bayarM === "CASH") cash += e.nominal;
+        else qris += e.nominal;
+    });
+
+    document.getElementById("totCash").textContent  = fmt(cash);
+    document.getElementById("totQris").textContent  = fmt(qris);
+    document.getElementById("totSemua").textContent = fmt(cash + qris);
+
+}
+
+function esc(s){
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+/* ================= BUILD REPORT GRID ================= */
+
+/* Susunan ngikutin template Excel kamu:
+   REGULER di kolom A-C, VIP di E-G, VVIP di I-K (kolom D & H kosong). */
+
+function buildRows(){
+
+    const reportEntries = scopedEntries();
+
+    const cols = ["REGULER","VIP","VVIP"].map(k =>
+        reportEntries
+            .filter(e => e.kat === k)
+            .map(e => {
+                return {
+                    nama: e.nama,
+                    pay : fmt(e.nominal) + " " + e.bayarM
+                };
+            })
+    );
+
+    const rows = [];
+
+    const row = (a,b,c) => rows.push([a,b,c]);
+
+
+    row("LAPORAN STAFF","","");
+    row("NAMA : " + (document.getElementById("staff").value || "-").toUpperCase(),"","");
+    row("TANGGAL : " + tanggalLabel(),"","");
+    row("","","");
+
+    row("REGULER","","","" ,"VIP","","","","VVIP","","");
+
+    row(
+        "NO","NAMA/PC","PEMBAYARAN","",
+        "NO","NAMA/PC","PEMBAYARAN","",
+        "NO","NAMA/PC","PEMBAYARAN"
+    );
+
+
+    const max = Math.max(cols[0].length, cols[1].length, cols[2].length);
+
+    for(let i = 0; i < max; i++){
+
+        rows.push([
+            i < cols[0].length ? (i+1)   : "", 
+            i < cols[0].length ? cols[0][i].nama : "", 
+            i < cols[0].length ? cols[0][i].pay  : "", "",
+
+            i < cols[1].length ? (i+1)   : "", 
+            i < cols[1].length ? cols[1][i].nama : "", 
+            i < cols[1].length ? cols[1][i].pay  : "", "",
+
+            i < cols[2].length ? (i+1)   : "", 
+            i < cols[2].length ? cols[2][i].nama : "", 
+            i < cols[2].length ? cols[2][i].pay  : ""
+        ]);
+
+    }
+
+
+    let cash = 0, qris = 0;
+
+    reportEntries.forEach(e => {
+        if(e.bayarM === "CASH") cash += e.nominal; else qris += e.nominal;
+    });
+
+
+    row("","","");
+    row("","","");
+
+    row("", "TOTAL CASH : "     + fmt(cash));
+    row("", "TOTAL QRIS : "     + fmt(qris));
+
+    return rows;
+
+}
+
+
+/* ================= TSV (COPY KE EXCEL) ================= */
+
+function tsvText(){
+
+    return buildRows()
+        .map(r => r.join("\t"))
+        .join("\n");
+
+}
+
+
+function copyTsv(){
+
+    const t = tsvText();
+
+    const done = () => toast("Tersalin! Buka Excel → klik sel A1 → Ctrl+V");
+
+    if(navigator.clipboard && navigator.clipboard.writeText){
+
+        navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
+
+    }else{
+
+        fallbackCopy(t, done);
+
+    }
+
+}
+
+
+function fallbackCopy(text, done){
+
+    const ta = document.createElement("textarea");
+
+    ta.value = text;
+
+    document.body.appendChild(ta);
+
+    ta.select();
+
+    try{
+        document.execCommand("copy");
+        done();
+    }catch(e){
+        alert("Gagal copy otomatis. Buka DevTools atau pakai Unduh .xls.");
+    }
+
+    ta.remove();
+
+}
+
+
+/* ================= UNDUH .XLS ================= */
+
+function downloadXls(){
+    const rows = buildRows();
+    const totalCols = 11;
+    const cell = (value, style = "") =>
+        `<td style="${style}">${esc(value ?? "")}</td>`;
+    const border = "border:1px solid #d7e2d8;padding:7px 9px;";
+    let html = `<html><head><meta charset="UTF-8"><style>
+        body{font-family:Arial,sans-serif;color:#24352a;background:#fff}
+        table{border-collapse:collapse;width:100%;}
+    </style></head><body><table>
+        <colgroup>${[5,18,17,2,5,18,17,2,5,18,17].map(w => `<col style="width:${w}%">`).join("")}</colgroup>`;
+
+    rows.forEach((r, index) => {
+        html += "<tr>";
+
+        if(index <= 2){
+            const value = r[0] ?? "";
+            const style = index === 0
+                ? "background:#26734f;color:#fff;font-size:18px;font-weight:bold;padding:14px;border:1px solid #26734f;"
+                : "background:#eef5ef;color:#405449;font-size:11px;padding:7px 10px;border:1px solid #d7e2d8;";
+            html += `<td colspan="${totalCols}" style="${style}">${esc(value)}</td>`;
+        }else if(index === 4){
+            html += `<td colspan="3" style="${border}background:#26734f;color:#fff;text-align:center;font-weight:bold;padding:9px;">REGULER</td>`;
+            html += `<td style="${border}background:#fff;"></td>`;
+            html += `<td colspan="3" style="${border}background:#b87926;color:#fff;text-align:center;font-weight:bold;padding:9px;">VIP</td>`;
+            html += `<td style="${border}background:#fff;"></td>`;
+            html += `<td colspan="3" style="${border}background:#43594a;color:#fff;text-align:center;font-weight:bold;padding:9px;">VVIP</td>`;
+        }else if(index === 5){
+            for(let i = 0; i < totalCols; i++){
+                const spacer = i === 3 || i === 7;
+                html += cell(r[i], `${border}background:${spacer ? "#fff" : "#eaf1eb"};font-weight:bold;text-align:center;color:#405449;`);
+            }
+        }else if(index >= rows.length - 2){
+            html += cell("", `${border}background:#eef5ef;`);
+            html += `<td colspan="10" style="${border}background:#eef5ef;font-weight:bold;color:#26734f;padding:8px 10px;">${esc(r[1] ?? "")}</td>`;
+        }else{
+            for(let i = 0; i < totalCols; i++){
+                const spacer = i === 3 || i === 7;
+                const style = `${border}background:${spacer ? "#fff" : (index % 2 ? "#fff" : "#f7faf7")};${i === 0 || i === 4 || i === 8 ? "text-align:center;" : ""}`;
+                html += cell(r[i], style);
+            }
+        }
+
+        html += "</tr>";
+    });
+
+    html += `</table></body></html>`;
+    const blob = new Blob(
+        ['\ufeff' + html],
+        {type:"application/vnd.ms-excel"}
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download =
+        "LAPORAN " +
+        (document.getElementById("staff").value || "STAFF").toUpperCase() + " " +
+        tanggalLabel() + ".xls";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Terunduh. Kalau Excel kasih peringatan format, klik Yes aja.");
+
+    buildPrint(rows);
+}
+
+
+/* ================= CETAK ================= */
+
+function buildPrint(rows){
+
+
+    let html = `
+        <h1>LAPORAN STAFF</h1>
+        <p>NAMA : ${esc((document.getElementById("staff").value || "-").toUpperCase())}</p>
+        <p>TANGGAL : ${tanggalLabel()}</p>
+        <table>
+    `;
+
+
+    rows.slice(4).forEach((r, idx) => {
+
+        html += "<tr>";
+
+        r.forEach(c => {
+
+            const isHead = idx === 0 || idx === 1;
+
+            html += isHead
+                ? `<th>${c ?? ""}</th>`
+                : `<td>${c ?? ""}</td>`;
+
+        });
+
+        html += "</tr>";
+
+    });
+
+    html += `</table>`;
+
+
+    document.getElementById("printArea").innerHTML = html;
+
+}
+
+
+window.addEventListener("beforeprint", () => {
+
+    buildPrint(buildRows());
+
+});
+
+
+/* ================= RESET HARIAN ================= */
+
+function resetHarian(){
+
+    if(activeShift === "OWNER") return;
+    const shiftEntries = scopedEntries();
+    const selectedDate = document.getElementById("tanggal").value;
+
+    if(shiftEntries.length === 0){
+        alert("Belum ada data pada tanggal yang dipilih.");
+        return;
+    }
+
+
+    if(
+        confirm(
+            "Reset data shift " + activeShift + " tanggal " + tanggalLabel() + "?\n\n" +
+            "Hanya data pada tanggal yang dipilih yang akan dihapus.\n" +
+            "PASTIKAN laporan shift sudah di-copy / diunduh dulu.\n" +
+            "OK untuk reset, Batal untuk batal."
+        )
+    ){
+
+        const previous = entries;
+        entries = entries.filter(e =>
+            (e.shift || "SIANG") !== activeShift || e.date !== selectedDate
+        );
+
+        if(!saveAll()){
+            entries = previous;
+            render();
+            return;
+        }
+
+        render();
+        toast("Data shift " + activeShift + " tanggal " + tanggalLabel() + " dikosongkan.");
+
+    }
+
+}
+
+/* ================= TOAST ================= */
+
+let toastTimer;
+
+function toast(msg){
+
+    const t = document.getElementById("toast");
+
+    t.textContent = msg;
+
+    t.classList.add("show");
+
+    clearTimeout(toastTimer);
+
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+
+}
+
+
+function downloadBackup(){
+    const backup = {
+        app:"ARENA 27 NET KASIR",
+        version:1,
+        exportedAt:new Date().toISOString(),
+        entries,
+        prices:priceSettings,
+        staff:{
+            SIANG:localStorage.getItem("billing_staff_SIANG") || "",
+            MALAM:localStorage.getItem("billing_staff_MALAM") || ""
+        }
+    };
+    const blob = new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `cadangan-kasir-arena27-${todayKey()}.json`;
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+    toast("Cadangan kasir berhasil diunduh.");
+}
+
+async function restoreBackup(event){
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if(!file) return;
+    try{
+        const backup = JSON.parse(await file.text());
+        if(backup.app !== "ARENA 27 NET KASIR" || backup.version !== 1 || !Array.isArray(backup.entries) || !backup.prices || typeof backup.prices !== "object"){
+            throw new Error("File bukan cadangan kasir Arena 27 Net yang valid.");
+        }
+        const validEntries = backup.entries.every(entry => entry &&
+            ["REGULER","VIP","VVIP"].includes(entry.kat) &&
+            ["CASH","QRIS"].includes(entry.bayarM) &&
+            typeof entry.nama === "string" && Number.isFinite(Number(entry.nominal)) && Number(entry.nominal) > 0 &&
+            /^\d{4}-\d{2}-\d{2}$/.test(entry.date) && ["SIANG","MALAM"].includes(entry.shift || "SIANG"));
+        const defaults = backup.prices.defaults && typeof backup.prices.defaults === "object" && !Array.isArray(backup.prices.defaults) ? backup.prices.defaults : {};
+        const pc = backup.prices.pc && typeof backup.prices.pc === "object" && !Array.isArray(backup.prices.pc) ? backup.prices.pc : {};
+        const validPrices = Object.values(defaults).every(value=>value===null||(Number.isFinite(Number(value))&&Number(value)>=0)) &&
+            Object.entries(pc).every(([name,value])=>name.trim()&&Number.isFinite(Number(value))&&Number(value)>=0);
+        if(!validEntries) throw new Error("Ada data sesi yang tidak valid di file cadangan.");
+        if(!validPrices) throw new Error("Pengaturan harga pada file cadangan tidak valid.");
+        if(!confirm(`Pulihkan ${backup.entries.length} sesi dan pengaturan harga dari file ini? Data kasir saat ini akan diganti.`)) return;
+
+        const oldEntries = entries;
+        const oldPrices = priceSettings;
+        const storageKeys = ["billing_entries","billing_prices","billing_staff_SIANG","billing_staff_MALAM"];
+        const oldStorage = Object.fromEntries(storageKeys.map(key=>[key,localStorage.getItem(key)]));
+        entries = backup.entries.map(entry=>({...entry,shift:entry.shift || "SIANG"}));
+        priceSettings = {defaults,pc};
+        try{
+            localStorage.setItem("billing_entries",JSON.stringify(entries));
+            localStorage.setItem("billing_prices",JSON.stringify(priceSettings));
+            ["SIANG","MALAM"].forEach(shift=>localStorage.setItem("billing_staff_"+shift,String(backup.staff?.[shift] || "")));
+        }catch(error){
+            entries = oldEntries;
+            priceSettings = oldPrices;
+            storageKeys.forEach(key=>{
+                try{
+                    if(oldStorage[key]===null) localStorage.removeItem(key);
+                    else localStorage.setItem(key,oldStorage[key]);
+                }catch(rollbackError){}
+            });
+            throw new Error("Gagal menyimpan pemulihan di browser. Data aktif dipertahankan sebisa mungkin.");
+        }
+        initPrices();
+        render();
+        toast("Cadangan berhasil dipulihkan.");
+    }catch(error){
+        alert(error.message || "File cadangan tidak dapat dibaca.");
+    }
+}
+
+/* ================= START ================= */
+
+document.getElementById("staff").value = activeShift === "OWNER"
+    ? "OWNER"
+    : (localStorage.getItem("billing_staff_" + activeShift) ||
+       (activeShift === "SIANG" ? localStorage.getItem("billing_staff") : "") || "");
+
+document.getElementById("tanggal").value =
+    localStorage.getItem("billing_tgl") || todayKey();
+
+initPrices();
+renderChips();
+applyShift();
+
+</script>
+
+</body>
+</html>

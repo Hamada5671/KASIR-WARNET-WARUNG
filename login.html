@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0f24">
+<title>Masuk — ARENA 27 NET</title>
+<link rel="stylesheet" href="assets/theme.css">
+<style>
+body{display:grid;place-items:center;padding:28px 16px 44px}
+.gate{position:relative;width:min(100%,430px);padding:30px 30px 24px;border-radius:24px;
+    border:1px solid rgba(163,178,255,.28);
+    background:linear-gradient(160deg,rgba(28,24,60,.82),rgba(13,18,42,.86));
+    backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+    box-shadow:0 34px 80px rgba(3,5,16,.7),inset 0 1px rgba(255,255,255,.09);
+    animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.985)}to{opacity:1;transform:none}}
+.gate::before{content:"";position:absolute;inset:0;border-radius:24px;pointer-events:none;padding:1px;
+    background:linear-gradient(140deg,rgba(255,122,184,.6),rgba(126,232,255,.25) 45%,rgba(162,92,255,.55));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude}
+.gate-head{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.gate-head .logo-icon{width:58px;height:58px;border-radius:18px}
+.gate-title{font-family:var(--font-display);font-size:24px;letter-spacing:.02em;line-height:1.1}
+.gate-sub{margin-top:4px;color:var(--muted);font-size:11.5px;letter-spacing:.05em}
+.gate-note{margin-top:20px;padding-top:15px;border-top:1px solid var(--line);color:var(--muted);font-size:10.5px;line-height:1.7}
+.shift-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:18px}
+.shift-pick button{padding:11px 6px;border-radius:11px;border:1px solid var(--line);
+    background:rgba(9,12,28,.5);color:#aeb8e6;font-size:11px;font-weight:800;letter-spacing:.05em;transition:.18s}
+.shift-pick button:hover{border-color:var(--line-strong);color:#fff;transform:translateY(-1px)}
+.shift-pick button.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,rgba(255,122,184,.9),rgba(162,92,255,.9));box-shadow:0 10px 24px rgba(162,92,255,.34)}
+.prompt{margin-bottom:16px;color:#cdd5ff;font-size:12.5px;line-height:1.65}
+.prompt b{font-family:var(--font-display);font-size:15px;display:block;margin-bottom:4px;color:#fff}
+.gate .field{margin-bottom:13px}
+.gate .field input{min-height:46px;font-size:14px}
+.gate .btn{width:100%;min-height:46px;font-size:13px;letter-spacing:.04em}
+.gate .btn[disabled]{opacity:.65}
+.err{min-height:18px;margin-top:10px;color:var(--bad);font-size:11.5px;font-weight:700}
+.alt{margin-top:9px;width:100%}
+.clock{position:absolute;top:15px;right:18px;color:var(--muted);font-size:10.5px;letter-spacing:.04em}
+@media(max-height:640px){.gate{padding:20px 22px 16px}.gate-head{margin-bottom:14px}.prompt{margin-bottom:11px}.gate-note{margin-top:12px;padding-top:11px}}
+@media(max-width:420px){.gate{padding:24px 20px 20px;border-radius:20px}.gate-title{font-size:20px}.gate-head .logo-icon{width:50px;height:50px}.clock{display:none}}
+</style>
+</head>
+<body>
+
+<main class="gate">
+    <div class="clock" id="clock"></div>
+
+    <div class="gate-head">
+        <div class="logo-icon" role="img" aria-label="Logo Arena 27 Net">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M32 5 53 13v16c0 14-8 23-21 30C19 52 11 43 11 29V13L32 5Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                <text x="32" y="34" text-anchor="middle" fill="currentColor" font-family="Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="-1">A27</text>
+                <path d="M21 40h22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                <text x="32" y="49" text-anchor="middle" fill="currentColor" font-family="Arial,sans-serif" font-size="6" font-weight="700" letter-spacing="1.1">ARENA NET</text>
+            </svg>
+        </div>
+        <div>
+            <div class="gate-title">ARENA 27 NET</div>
+            <div class="gate-sub">kasir warnet &amp; stok warung</div>
+        </div>
+    </div>
+
+    <div class="shift-pick" id="shiftPick" role="tablist" aria-label="Pilih akun">
+        <button type="button" data-shift="SIANG" role="tab">SIANG</button>
+        <button type="button" data-shift="MALAM" role="tab">MALAM</button>
+        <button type="button" data-shift="OWNER" role="tab">OWNER</button>
+    </div>
+
+    <div id="formHost"></div>
+
+    <p class="gate-note">
+        Akun dan laporan tersimpan di browser komputer ini, bukan di server.
+        Setiap komputer punya akun sendiri — jadi PIN dibuat sekali di komputer yang dipakai jaga.
+    </p>
+</main>
+
+<script src="assets/anime-bg.js"></script>
+<script src="assets/auth.js"></script>
+<script>
+const pick = document.getElementById("shiftPick");
+const host = document.getElementById("formHost");
+const clock = document.getElementById("clock");
+const query = new URLSearchParams(location.search);
+
+if (query.get("switch")) ArenaAuth.signOut();
+else if (ArenaAuth.session()) location.replace("index.html");
+
+let shift = query.get("as") || localStorage.getItem("arena27_last_shift") || "SIANG";
+if (!ArenaAuth.SHIFTS.includes(shift)) shift = "SIANG";
+
+function tickClock() {
+    const now = new Date();
+    clock.textContent = now.toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })
+        + " · " + now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+tickClock();
+setInterval(tickClock, 30000);
+
+const isNew = () => !ArenaAuth.accounts()[shift];
+
+function render() {
+    const fresh = isNew();
+    const name = ArenaAuth.LABELS[shift];
+    pick.querySelectorAll("button").forEach(b => {
+        const on = b.dataset.shift === shift;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-selected", on);
+    });
+
+    const secretField = ArenaAuth.isOwnerPin(shift)
+        ? `<div class="field"><label for="secret">PIN ${fresh ? "BARU" : ""} OWNER</label>
+               <input id="secret" type="password" inputmode="numeric" maxlength="8"
+                      autocomplete="${fresh ? "new-password" : "current-password"}" required></div>`
+        : `<div class="field"><label for="user">USERNAME ${name.replace("SHIFT ", "")}</label>
+               <input id="user" maxlength="40" autocomplete="username" required></div>
+           <div class="field"><label for="secret">PASSWORD</label>
+               <input id="secret" type="password" autocomplete="${fresh ? "new-password" : "current-password"}" required></div>`;
+
+    const hint = fresh
+        ? (ArenaAuth.isOwnerPin(shift)
+            ? "Buat PIN Owner 4–8 angka. PIN ini dipakai buat lihat gabungan semua shift."
+            : "Buat username dan password buat shift ini. Shift lain dibuat lewat tab masing-masing.")
+        : (ArenaAuth.isOwnerPin(shift)
+            ? "Masukkan PIN Owner buat buka ringkasan semua shift."
+            : "Masukkan username dan password shift ini.");
+
+    host.innerHTML = `
+        <p class="prompt"><b>${fresh ? "Buat akun " + name : "Masuk ke " + name}</b>${hint}</p>
+        <form id="authForm" autocomplete="on">
+            ${secretField}
+            <button class="btn" type="submit">${fresh ? "Simpan &amp; masuk" : "Masuk"}</button>
+            <div class="err" id="err" role="alert" aria-live="polite"></div>
+            ${fresh ? '<button class="btn-ghost alt" type="button" id="pickOther">Akun ini sudah pernah dibuat di tab lain?</button>' : ""}
+        </form>`;
+
+    const form = document.getElementById("authForm");
+    const err = document.getElementById("err");
+    const secret = document.getElementById("secret");
+    secret.focus();
+
+    document.getElementById("pickOther")?.addEventListener("click", () => {
+        shift = ArenaAuth.SHIFTS.find(s => s !== shift && !ArenaAuth.accounts()[s])
+             || ArenaAuth.SHIFTS.find(s => s !== shift);
+        localStorage.setItem("arena27_last_shift", shift);
+        render();
+    });
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        const button = event.submitter || form.querySelector("button[type=submit]");
+        const userField = document.getElementById("user");
+        const value = secret.value;
+        const username = userField ? userField.value.trim() : "OWNER";
+
+        if (!value) { err.textContent = ArenaAuth.isOwnerPin(shift) ? "PIN belum diisi." : "Password belum diisi."; return; }
+        if (userField && !username) { err.textContent = "Username belum diisi."; userField.focus(); return; }
+
+        button.disabled = true;
+        button.textContent = "Menyiapkan…";
+        err.textContent = "";
+        try {
+            await (isNew() ? ArenaAuth.register(shift, username, value) : ArenaAuth.login(shift, username, value));
+            ArenaAuth.startSession(shift);
+            localStorage.setItem("arena27_last_shift", shift);
+            button.textContent = "Berhasil, membuka kasir…";
+            location.replace("index.html");
+        } catch (problem) {
+            err.textContent = problem.message || "Gagal masuk, coba lagi.";
+            button.disabled = false;
+            button.innerHTML = isNew() ? "Simpan &amp; masuk" : "Masuk";
+            secret.value = "";
+            secret.focus();
+        }
+    });
+}
+
+pick.addEventListener("click", event => {
+    const button = event.target.closest("button[data-shift]");
+    if (!button) return;
+    shift = button.dataset.shift;
+    localStorage.setItem("arena27_last_shift", shift);
+    render();
+});
+
+render();
+</script>
+</body>
+</html>

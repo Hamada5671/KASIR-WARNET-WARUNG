@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0f24">
+<title>Stok &amp; penjualan — Arena 27</title>
+<link rel="stylesheet" href="assets/theme.css">
+<style>
+.head-tools{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+#rokokCard{border-top:1px solid rgba(255,122,184,.5)}
+@media(max-width:700px){.head-tools{width:100%;justify-content:space-between}}
+</style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div class="brand"><div class="logo" aria-hidden="true">A27</div><div><div class="title">Stok &amp; penjualan</div><div class="subtitle">Arena 27 Net · barang warung &amp; rokok eceran</div></div></div>
+        <div class="head-tools">
+            <div class="who"><span class="dot"></span><span>Jaga sebagai</span><b id="whoName">Shift Siang</b></div>
+            <a class="back" href="index.html">Kasir</a>
+            <a class="back" href="login.html?switch=1">Ganti akun</a>
+            <button class="btn-ghost" type="button" onclick="ArenaAuth.signOut();location.replace('login.html')">Keluar</button>
+        </div>
+    </header>
+
+    <section class="card stats" aria-label="Ringkasan penjualan">
+        <div class="stat"><div class="label">BARANG TERDAFTAR</div><div class="value" id="itemCount">0</div></div>
+        <div class="stat"><div class="label">UNIT TERSISA</div><div class="value" id="unitCount">0</div></div>
+        <div class="stat"><div class="label">PENJUALAN HARI INI</div><div class="value" id="salesTotal">Rp0</div></div>
+    </section>
+
+    <section class="card">
+        <h2>Tambah barang</h2>
+        <form id="itemForm" class="form-grid">
+            <div class="field"><label for="itemName">NAMA BARANG</label><input id="itemName" maxlength="60" placeholder="Contoh: Indomie" required></div>
+            <div class="field"><label for="itemQty">JUMLAH STOK</label><input id="itemQty" type="number" min="1" step="1" placeholder="10" required></div>
+            <div class="field"><label for="itemPrice">HARGA JUAL / UNIT</label><input id="itemPrice" type="number" min="1" step="1" placeholder="5000" required></div>
+            <button class="btn" type="submit">+ Simpan Barang</button>
+        </form>
+        <p class="note">Kalau nama barangnya sudah ada, jumlahnya nambah sendiri dan harga jualnya ikut diperbarui.</p>
+    </section>
+
+    <section class="card">
+        <h2>Jual barang</h2>
+        <form id="saleForm" class="form-grid">
+            <div class="field"><label for="saleItem">PILIH BARANG</label><select id="saleItem" required><option value="">Pilih barang</option></select></div>
+            <div class="field"><label for="saleQty">JUMLAH TERJUAL</label><input id="saleQty" type="number" min="1" step="1" placeholder="1" required></div>
+            <div class="field"><label for="saleMethod">PEMBAYARAN</label><select id="saleMethod"><option value="CASH">CASH</option><option value="QRIS">QRIS</option></select></div>
+            <button class="btn" type="submit">Catat Penjualan</button>
+        </form>
+        <p class="note">Stok otomatis berkurang. Total penjualan dihitung dari harga jual dikali jumlah yang keluar.</p>
+    </section>
+
+    <section class="card" id="rokokCard">
+        <h2>Rokok eceran</h2>
+        <div class="pills" id="rkPills" aria-live="polite"></div>
+
+        <div class="rk-quick">
+            <div class="chip-title">Merek yang sering laku</div>
+            <div class="chips" id="rkChips"></div>
+        </div>
+
+        <form id="rokokForm" class="form-grid">
+            <div class="field span2"><label for="rokokName">MEREK ROKOK</label><input id="rokokName" list="rokokList" maxlength="60" autocomplete="off" placeholder="Ketik atau pilih merek…" required><datalist id="rokokList"></datalist></div>
+            <div class="field"><label>SATUAN</label><div class="seg" id="rkUnitSeg"><button type="button" data-unit="BATANG" class="active">Batang</button><button type="button" data-unit="BUNGKUS">Bungkus</button><!-- Conditional half-pack button --><button type="button" data-unit="SETENGAH_BUNGKUS" id="rkHalfPackBtn" style="display:none;">½ Bks</button></div></div>
+            <div class="field"><label for="rokokQty">JUMLAH</label><div class="stepper"><button type="button" data-step="-1" aria-label="Kurangi jumlah">−</button><input id="rokokQty" type="number" min="1" step="1" value="1" required><button type="button" data-step="1" aria-label="Tambah jumlah">+</button></div></div>
+            <div class="field"><label for="rokokPrice">HARGA / <span id="rkUnitLabel">BATANG</span></label><input id="rokokPrice" type="number" min="1" step="1" placeholder="Harga satuan" required></div>
+            <div class="field"><label>PEMBAYARAN</label><div class="seg" id="rkMethodSeg"><button type="button" data-method="CASH" class="cash active">CASH</button><button type="button" data-method="QRIS" class="qris">QRIS</button></div></div>
+            <div class="field" id="rkPaidField"><label for="rokokPaid">UANG DITERIMA</label><input id="rokokPaid" type="number" min="0" step="1" placeholder="Opsional"></div>
+            <button class="btn" type="submit">Jual</button>
+        </form>
+        <div class="rk-total" id="rkTotal"></div>
+        <div class="chips" id="rkCashChips"></div>
+        <p class="note">Harga terakhir tiap merek (batangan maupun bungkus) diingat sendiri. Stok rokok dipisah dari stok barang, dan baru dihitung kalau stok mereknya diisi di daftar merek.</p>
+
+        <details class="sub" open>
+            <summary>Rokok hari ini</summary>
+            <div class="sub-body">
+                <div class="table-wrap"><table><thead><tr><th>MEREK</th><th class="num">BATANG</th><th class="num">½ BKS</th><th class="num">BUNGKUS</th><th class="num">CASH</th><th class="num">QRIS</th><th class="num">TOTAL</th></tr></thead><tbody id="rkRecapList"></tbody><tfoot id="rkRecapFoot"></tfoot></table></div>
+            </div>
+        </details>
+
+        <details class="sub" id="rkMasterDetails" open>
+            <summary>Daftar merek rokok · harga &amp; stok</summary>
+            <div class="sub-body">
+                <form id="rokokMasterForm" class="form-grid">
+                    <div class="field span2"><label for="rmName">NAMA MEREK</label><input id="rmName" maxlength="60" placeholder="Contoh: Sampoerna Mild" required></div>
+                    <div class="field"><label for="rmIsi">ISI BATANG / BUNGKUS</label><input id="rmIsi" type="number" min="1" max="100" step="1" value="16" required></div>
+                    <div class="field"><label for="rmBatang">HARGA / BATANG</label><input id="rmBatang" type="number" min="1" step="1" placeholder="2000"></div>
+                    <div class="field"><label for="rmBungkus">HARGA / BUNGKUS</label><input id="rmBungkus" type="number" min="1" step="1" placeholder="32000"></div>
+                    <div class="field"><label for="rmSetengah">HARGA / ½ BUNGKUS</label><input id="rmSetengah" type="number" min="1" step="1" placeholder="Opsional"></div>
+                    <div class="field"><label for="rmStok">TAMBAH STOK (BUNGKUS)</label><input id="rmStok" type="number" min="0" step="1" placeholder="Opsional"></div>
+                    <button class="btn" type="submit" id="rmSubmit">Simpan merek</button>
+                    <button class="ghost" type="button" id="rmCancel" hidden>Batal edit</button>
+                </form>
+                <p class="note" style="margin-bottom:12px">Kalau merek sudah ada, harga &amp; isi diperbarui dan stoknya ditambahkan. Kosongkan stok kalau tidak mau menghitung stok merek itu. Tanda stok menipis memakai batas di "Daftar stok" (dihitung dalam bungkus).</p>
+                <div class="table-wrap"><table><thead><tr><th>MEREK</th><th>ISI</th><th>HARGA / BTG</th><th>HARGA / ½ BKS</th><th>HARGA / BKS</th><th>STOK</th><th style="text-align:right">AKSI</th></tr></thead><tbody id="rokokMasterList"></tbody></table></div>
+            </div>
+        </details>
+    </section>
+
+    <section class="card">
+        <h2>Isi stok</h2>
+        <div class="field" style="max-width:220px;margin-bottom:14px"><label for="lowStockLimit">STOK DIBILANG MENIPIS KALAU</label><input id="lowStockLimit" type="number" min="0" step="1" value="3"></div>
+        <div class="field" style="max-width:360px;margin-bottom:14px"><label for="itemSearch">CARI BARANG</label><input id="itemSearch" type="search" placeholder="Ketik nama barang…"></div>
+        <div class="table-wrap"><table><thead><tr><th>BARANG</th><th>STOK</th><th>HARGA JUAL</th><th style="text-align:right">AKSI</th></tr></thead><tbody id="stockList"></tbody></table></div>
+    </section>
+
+    <section class="card">
+        <h2>Cadangan data</h2>
+        <p class="note" style="margin:0 0 12px">Simpan salinan barang, daftar merek rokok, dan seluruh riwayat penjualan sebagai file JSON agar mudah dipulihkan jika data browser terhapus.</p>
+        <div class="actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <button class="small-btn" type="button" id="exportBackup">Unduh cadangan</button>
+            <button class="small-btn" type="button" onclick="document.getElementById('stockBackupFile').click()">Pulihkan cadangan</button>
+            <input id="stockBackupFile" type="file" accept="application/json,.json" hidden>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Laporan penjualan</h2>
+        <form id="reportForm" class="form-grid">
+            <div class="field"><label for="reportFrom">DARI TANGGAL</label><input id="reportFrom" type="date"></div>
+            <div class="field"><label for="reportTo">SAMPAI TANGGAL</label><input id="reportTo" type="date"></div>
+            <div class="field"><label for="reportMethod">PEMBAYARAN</label><select id="reportMethod"><option value="ALL">Semua metode</option><option value="CASH">CASH</option><option value="QRIS">QRIS</option></select></div>
+            <div class="field"><label for="reportType">JENIS</label><select id="reportType"><option value="ALL">Barang &amp; rokok</option><option value="BARANG">Barang saja</option><option value="ROKOK">Rokok saja</option></select></div>
+            <button class="btn" type="submit">Tampilkan laporan</button>
+        </form>
+        <p class="note" id="reportSummary" aria-live="polite"></p>
+        <div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>WAKTU</th><th>BARANG</th><th>JUMLAH</th><th>PEMBAYARAN</th><th>TOTAL</th></tr></thead><tbody id="reportList"></tbody></table></div>
+        <button class="small-btn" id="downloadReport" type="button" style="margin-top:12px">Unduh laporan CSV</button>
+    </section>
+
+    <section class="card">
+        <h2>Transaksi hari ini</h2>
+        <div class="table-wrap history"><table><thead><tr><th>WAKTU</th><th>BARANG</th><th>JUMLAH</th><th>PEMBAYARAN</th><th>TOTAL</th><th></th></tr></thead><tbody id="salesList"></tbody></table></div>
+        <div id="salesEmpty" class="empty" hidden>Belum ada penjualan hari ini.</div>
+    </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="assets/anime-bg.js"></script>
+<script src="assets/auth.js"></script>
+<script>
+const stokSession = ArenaAuth.session();
+if(!stokSession) location.replace("login.html");
+document.getElementById("whoName").textContent = stokSession ? ArenaAuth.LABELS[stokSession.account] : "Belum login";
+
+const STORAGE_KEY = "arena27_stock_data";
+const LOW_STOCK_KEY = "arena27_low_stock_limit";
+const ROKOK_KEY = "arena27_rokok_master";
+const LEGACY_ROKOK_LIST_KEY = "arena27_rokok_list";
+const DEFAULT_ISI = 16;
+const ENABLE_HALF_PACKS = true; // Enable half-pack sales
+const CASH_NOTES = [2000,5000,10000,20000,50000,100000];
+const savedLowStock = localStorage.getItem(LOW_STOCK_KEY);
+let lowStockLimit = savedLowStock === null ? 3 : Number(savedLowStock);
+if(!Number.isInteger(lowStockLimit) || lowStockLimit < 0) lowStockLimit = 3;
+let data = {items: [], sales: []};
+let rokok = [];
+let rkUnit = "BATANG";
+let rkMethod = "CASH";
+let rkPriceAuto = false;
+let rkEditingId = null;
+
+function newId(){return Date.now()+""+Math.random().toString(16).slice(2);}
+function sameName(a,b){return String(a).trim().toLocaleLowerCase("id-ID")===String(b).trim().toLocaleLowerCase("id-ID");}
+function priceOrNull(value){
+    if(value===null||value===undefined||value==="")return null;
+    const n=Number(value);
+    return Number.isFinite(n)&&n>=1?n:null;
+}
+function normalizeRokok(list){
+    if(!Array.isArray(list))return [];
+    const out=[];
+    list.forEach(raw=>{
+        const src=typeof raw==="string"?{name:raw}:raw;
+        if(!src||typeof src.name!=="string"||!src.name.trim())return;
+        const name=src.name.trim();
+        if(out.some(r=>sameName(r.name,name)))return;
+        const isi=Number(src.isi);
+        const stok=src.stok===null||src.stok===undefined||src.stok===""?null:Number(src.stok);
+        out.push({
+            id:typeof src.id==="string"&&src.id?src.id:newId(),
+            name,
+            isi:Number.isInteger(isi)&&isi>0&&isi<=100?isi:DEFAULT_ISI,
+            hargaBatang:priceOrNull(src.hargaBatang),
+            hargaBungkus:priceOrNull(src.hargaBungkus),
+            hargaSetengah:priceOrNull(src.hargaSetengah),
+            stok:Number.isInteger(stok)&&stok>=0?stok:null
+        });
+    });
+    return out;
+}
+
+try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(saved && Array.isArray(saved.items) && Array.isArray(saved.sales)) data = saved;
+} catch (error) {}
+try {
+    const saved = JSON.parse(localStorage.getItem(ROKOK_KEY));
+    if(Array.isArray(saved)) rokok = normalizeRokok(saved);
+    else {
+        let legacy = [];
+        try { legacy = JSON.parse(localStorage.getItem(LEGACY_ROKOK_LIST_KEY)) || []; } catch (error) {}
+        rokok = normalizeRokok(legacy);
+        // Penjualan rokok versi lama selalu per bungkus: ambil harga terakhirnya.
+        data.sales.forEach(sale=>{
+            if(!sale.isRokok||!String(sale.name||"").trim())return;
+            let r=rokok.find(x=>sameName(x.name,sale.name));
+            if(!r){r={id:newId(),name:String(sale.name).trim(),isi:DEFAULT_ISI,            hargaBatang:null,hargaBungkus:null,hargaSetengah:null,stok:null};rokok.push(r);}
+            if(priceOrNull(sale.price))r.hargaBungkus=Number(sale.price);
+        });
+        if(rokok.length) try { localStorage.setItem(ROKOK_KEY, JSON.stringify(rokok)); } catch (error) {}
+    }
+} catch (error) {}
+
+function saveData(){
+    try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        return true;
+    }catch(error){
+        alert("Data gagal disimpan di browser. Pastikan penyimpanan browser tersedia.");
+        return false;
+    }
+}
+function transact(mutate){
+    const before={data:JSON.stringify(data),rokok:JSON.stringify(rokok)};
+    mutate();
+    try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(ROKOK_KEY, JSON.stringify(rokok));
+        return true;
+    }catch(error){
+        data=JSON.parse(before.data);
+        rokok=JSON.parse(before.rokok);
+        try{localStorage.setItem(STORAGE_KEY,before.data);localStorage.setItem(ROKOK_KEY,before.rokok);}catch(rollbackError){}
+        alert("Data gagal disimpan di browser. Pastikan penyimpanan browser tersedia.");
+        return false;
+    }
+}
+function esc(value){
+    return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+}
+function money(value){return "Rp" + Math.round(Number(value)||0).toLocaleString("id-ID");}
+function num(value){return Number(value||0).toLocaleString("id-ID");}
+function showToast(message){
+    const el=document.getElementById("toast");
+    el.textContent=message;el.classList.add("show");
+    clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.classList.remove("show"),2800);
+}
+function localDateKey(date=new Date()){
+    const year=date.getFullYear();
+    const month=String(date.getMonth()+1).padStart(2,"0");
+    const day=String(date.getDate()).padStart(2,"0");
+    return `${year}-${month}-${day}`;
+}
+
+/* ---------- helper rokok ---------- */
+function findRokok(name){return String(name).trim()?rokok.find(r=>sameName(r.name,name)):undefined;}
+function saleUnit(sale){return sale.unit==="BATANG"?"BATANG":(sale.unit==="SETENGAH_BUNGKUS"?"SETENGAH_BUNGKUS":"BUNGKUS");}
+function unitShort(unit){return unit==="BATANG"?"btg":(unit==="SETENGAH_BUNGKUS"?"½bks":"bks");}
+function qtyLabel(sale){
+    return sale.isRokok?`${num(sale.qty)} ${unitShort(saleUnit(sale))}`:num(sale.qty);
+}
+function fmtStok(r){
+    if(r.stok===null)return "Tidak dihitung";
+    if(r.stok===0)return "Habis";
+    const bks=Math.floor(r.stok/r.isi), btg=r.stok%r.isi;
+    return [bks?`${bks} bks`:"",btg?`${btg} btg`:""].filter(Boolean).join(" ");
+}
+function isLowRokok(r){return r.stok!==null&&r.stok<=lowStockLimit*r.isi;}
+function storedPrice(r,unit){
+    if(!r)return null;
+    if(unit==="BATANG")return r.hargaBatang;
+    if(unit==="SETENGAH_BUNGKUS")return r.hargaSetengah??(r.hargaBungkus!==null?Math.round(r.hargaBungkus/2):(r.hargaBatang!==null?Math.round(r.hargaBatang*r.isi/2):null));
+    return r.hargaBungkus;
+}
+function saleTag(sale){return sale.isRokok?' <span class="tag">(rokok)</span>':"";}
+
+function render(){
+    const today=localDateKey();
+    const todaysSales=data.sales.filter(s=>s.date===today);
+    document.getElementById("itemCount").textContent=data.items.length;
+    document.getElementById("unitCount").textContent=data.items.reduce((sum,item)=>sum+Number(item.qty||0),0).toLocaleString("id-ID");
+    document.getElementById("salesTotal").textContent=money(todaysSales.reduce((sum,sale)=>sum+Number(sale.total||0),0));
+
+    document.getElementById("lowStockLimit").value=lowStockLimit;
+    const query=document.getElementById("itemSearch").value.trim().toLocaleLowerCase("id-ID");
+    const visibleItems=data.items.filter(item=>item.name.toLocaleLowerCase("id-ID").includes(query));
+    const stockList=document.getElementById("stockList");
+    stockList.innerHTML=visibleItems.length ? visibleItems.map(item=>`<tr>
+        <td><strong>${esc(item.name)}</strong></td>
+        <td class="${Number(item.qty)<=lowStockLimit?"low":""}">${Number(item.qty).toLocaleString("id-ID")}${Number(item.qty)<=lowStockLimit?" · Stok menipis":""}</td>
+        <td>${money(item.price)}</td>
+        <td><div class="actions"><button class="small-btn" type="button" onclick="editItem('${esc(item.id)}')">Edit</button><button class="small-btn" type="button" onclick="adjustStock('${esc(item.id)}')">Tambah stok</button><button class="small-btn delete" type="button" onclick="deleteItem('${esc(item.id)}')">Hapus</button></div></td>
+    </tr>`).join("") : `<tr><td colspan="4" class="empty">${data.items.length ? "Barang tidak ditemukan." : "Belum ada barang. Tambahkan barang terlebih dahulu."}</td></tr>`;
+
+    const select=document.getElementById("saleItem");
+    const selected=select.value;
+    select.innerHTML='<option value="">Pilih barang</option>'+data.items.map(item=>`<option value="${esc(item.id)}">${esc(item.name)} — stok ${Number(item.qty)} (${money(item.price)})</option>`).join("");
+    if(data.items.some(item=>item.id===selected)) select.value=selected;
+
+    const salesList=document.getElementById("salesList");
+    const latest=[...todaysSales].reverse();
+    document.getElementById("salesEmpty").hidden=latest.length>0;
+    salesList.innerHTML=latest.map(sale=>`<tr>
+        <td>${esc(sale.time)}</td><td><strong>${esc(sale.name)}</strong>${saleTag(sale)}</td><td>${qtyLabel(sale)}</td><td>${esc(sale.method)}</td><td>${money(sale.total)}</td>
+        <td><button class="small-btn delete" type="button" onclick="undoSale('${esc(sale.id)}')">Batal</button></td>
+    </tr>`).join("");
+    renderRokok(todaysSales);
+    renderReport();
+}
+
+/* ---------- tampilan warung rokok ---------- */
+function rokokSaleCounts(){
+    const counts={};
+    data.sales.forEach(sale=>{
+        if(!sale.isRokok)return;
+        const id=rokok.some(r=>r.id===sale.rokokId)?sale.rokokId:findRokok(sale.name)?.id;
+        if(id)counts[id]=(counts[id]||0)+1;
+    });
+    return counts;
+}
+function renderRokokChips(){
+    const counts=rokokSaleCounts();
+    const current=document.getElementById("rokokName").value;
+    const top=[...rokok].sort((a,b)=>(counts[b.id]||0)-(counts[a.id]||0)||a.name.localeCompare(b.name,"id")).slice(0,16);
+    document.getElementById("rkChips").innerHTML=top.length
+        ? top.map(r=>`<button type="button" data-id="${esc(r.id)}" class="${sameName(r.name,current)?"on":""}${isLowRokok(r)?" low-chip":""}" title="${esc(fmtStok(r))}">${esc(r.name)}</button>`).join("")
+        : '<span class="chip-empty">Merek yang pernah dicatat akan muncul di sini supaya tinggal klik.</span>';
+}
+function renderRokok(todaysSales){
+    document.getElementById("rokokList").innerHTML=rokok.map(r=>`<option value="${esc(r.name)}"></option>`).join("");
+    renderRokokChips();
+
+    const rkToday=todaysSales.filter(s=>s.isRokok);
+    const omzet=rkToday.reduce((sum,s)=>sum+Number(s.total||0),0);
+    const btg=rkToday.filter(s=>saleUnit(s)==="BATANG").reduce((sum,s)=>sum+Number(s.qty||0),0);
+    const half=rkToday.filter(s=>saleUnit(s)==="SETENGAH_BUNGKUS").reduce((sum,s)=>sum+Number(s.qty||0),0);
+    const bks=rkToday.filter(s=>saleUnit(s)==="BUNGKUS").reduce((sum,s)=>sum+Number(s.qty||0),0);
+    const groups=new Map();
+    rkToday.forEach(s=>{
+        const key=String(s.name).trim().toLocaleLowerCase("id-ID");
+        const g=groups.get(key)||{name:s.name,btg:0,half:0,bks:0,cash:0,qris:0,total:0};
+        if(saleUnit(s)==="BATANG")g.btg+=Number(s.qty||0);else if(saleUnit(s)==="SETENGAH_BUNGKUS")g.half+=Number(s.qty||0);else g.bks+=Number(s.qty||0);
+        if(s.method==="QRIS")g.qris+=Number(s.total||0);else g.cash+=Number(s.total||0);
+        g.total+=Number(s.total||0);
+        groups.set(key,g);
+    });
+    const recap=[...groups.values()].sort((a,b)=>b.total-a.total);
+    const lowCount=rokok.filter(isLowRokok).length;
+    document.getElementById("rkPills").innerHTML=
+        `<span class="pill money">Omzet rokok hari ini <b>${money(omzet)}</b></span>`+
+        `<span class="pill"><b>${num(btg)}</b> batang · <b>${num(half)}</b> setengah bungkus · <b>${num(bks)}</b> bungkus</span>`+
+        `<span class="pill"><b>${num(rkToday.length)}</b> transaksi</span>`+
+        (recap.length?`<span class="pill">Terlaris: <b>${esc(recap[0].name)}</b></span>`:"")+
+        (lowCount?`<span class="pill alert">⚠ <b>${lowCount}</b> merek stok menipis</span>`:"");
+
+    document.getElementById("rkRecapList").innerHTML=recap.length
+        ? recap.map(g=>`<tr><td><strong>${esc(g.name)}</strong></td><td class="num">${num(g.btg)}</td><td class="num">${num(g.half)}</td><td class="num">${num(g.bks)}</td><td class="num">${money(g.cash)}</td><td class="num">${money(g.qris)}</td><td class="num"><strong>${money(g.total)}</strong></td></tr>`).join("")
+        : '<tr><td colspan="7" class="empty">Belum ada penjualan rokok hari ini.</td></tr>';
+    const sumCash=recap.reduce((s,g)=>s+g.cash,0), sumQris=recap.reduce((s,g)=>s+g.qris,0);
+    document.getElementById("rkRecapFoot").innerHTML=recap.length
+        ? `<tr><td>TOTAL</td><td class="num">${num(btg)}</td><td class="num">${num(half)}</td><td class="num">${num(bks)}</td><td class="num">${money(sumCash)}</td><td class="num">${money(sumQris)}</td><td class="num">${money(omzet)}</td></tr>`
+        : "";
+
+    document.getElementById("rokokMasterList").innerHTML=rokok.length
+        ? [...rokok].sort((a,b)=>a.name.localeCompare(b.name,"id")).map(r=>`<tr>
+            <td><strong>${esc(r.name)}</strong></td>
+            <td>${r.isi} btg</td>
+            <td>${r.hargaBatang?money(r.hargaBatang):"—"}</td>
+            <td>${r.hargaSetengah?money(r.hargaSetengah):"—"}</td>
+            <td>${r.hargaBungkus?money(r.hargaBungkus):"—"}</td>
+            <td class="${isLowRokok(r)?"low":""}">${esc(fmtStok(r))}${isLowRokok(r)&&r.stok>0?" · menipis":""}</td>
+            <td><div class="actions"><button class="small-btn" type="button" data-act="edit" data-id="${esc(r.id)}">Edit</button><button class="small-btn" type="button" data-act="stok" data-id="${esc(r.id)}">Koreksi stok</button><button class="small-btn delete" type="button" data-act="del" data-id="${esc(r.id)}">Hapus</button></div></td>
+        </tr>`).join("")
+        : '<tr><td colspan="7" class="empty">Belum ada merek. Tambahkan lewat form di atas.</td></tr>';
+
+    updateRkSummary();
+}
+
+/* ---------- form jual rokok ---------- */
+function rkEls(){
+    return {
+        name:document.getElementById("rokokName"),
+        qty:document.getElementById("rokokQty"),
+        price:document.getElementById("rokokPrice"),
+        paid:document.getElementById("rokokPaid")
+    };
+}
+function applyStoredPrice(force){
+    const el=rkEls();
+    const price=storedPrice(findRokok(el.name.value),rkUnit);
+    if(price){el.price.value=Number(price)||"";rkPriceAuto=true;} // Ensure it's a number
+    else if(rkPriceAuto||force){el.price.value="";rkPriceAuto=false;}
+}
+// Helper to manage unit selection, now including conditional half-pack logic
+function syncRokokForm(){
+    // Show/hide half-pack button based on feature flag and selected rokok
+    const halfBtn = document.getElementById("rkHalfPackBtn");
+    const r = findRokok(document.getElementById("rokokName").value);
+    const showHalf = ENABLE_HALF_PACKS && (r?.isi||DEFAULT_ISI) % 2 === 0; // Half packs require an even pack size
+    halfBtn.style.display = showHalf ? "" : "none";
+    if(!showHalf&&rkUnit==="SETENGAH_BUNGKUS"){
+        rkUnit="BATANG";
+        applyStoredPrice(true);
+    }
+
+    // Update active state for all buttons
+    document.querySelectorAll("#rkUnitSeg button").forEach(b => {
+        b.classList.toggle("active", b.dataset.unit === rkUnit);
+    });
+    document.querySelectorAll("#rkMethodSeg button").forEach(b => {
+        b.classList.toggle("active", b.dataset.method === rkMethod);
+    });
+
+    // Update UI elements affected by unit change
+    const labelMap = {"BATANG": "BATANG", "BUNGKUS": "BUNGKUS", "SETENGAH_BUNGKUS": "½ BKS"};
+    document.getElementById("rkUnitLabel").textContent = labelMap[rkUnit] || rkUnit;
+    document.getElementById("rkPaidField").style.display = rkMethod === "CASH" ? "" : "none";
+    updateRkSummary();
+}
+function updateRkSummary(){
+    const el=rkEls();
+    const r=findRokok(el.name.value);
+    const qty=Number(el.qty.value);
+    const price=Number(el.price.value);
+    const valid=Number.isInteger(qty)&&qty>=1&&Number.isFinite(price)&&price>=1;
+    const total=valid?qty*price:0;
+    const paid=Number(el.paid.value)||0;
+    const parts=[`<span>Total <span class="big">${valid?money(total):"—"}</span></span>`];
+    if(valid)parts.push(`<span class="muted">${num(qty)} ${unitShort(rkUnit)} × ${money(price)}</span>`);
+    if(rkMethod==="CASH"&&valid&&paid>0){
+        parts.push(paid>=total
+            ?`<span>Kembalian <b class="ok">${money(paid-total)}</b></span>`
+            :`<span class="warn">Uang kurang ${money(total-paid)}</span>`);
+    }
+    if(el.name.value.trim()){
+        if(!r)parts.push('<span class="muted">Merek baru — otomatis masuk daftar merek</span>');
+        else if(r.stok===null)parts.push(`<span class="muted">Isi ${r.isi} btg/bks · stok tidak dihitung</span>`);
+        else{
+            // Adjust stock check logic for half packs
+            let need;
+            if (rkUnit === "BUNGKUS") {
+                need = qty * r.isi;
+            } else if (rkUnit === "SETENGAH_BUNGKUS") {
+                need = qty * (r.isi / 2);
+            } else { // BATANG
+                need = qty;
+            }
+            parts.push(need>r.stok
+                ?`<span class="warn">Stok tidak cukup — sisa ${esc(fmtStok(r))}</span>`
+                :`<span class="${isLowRokok(r)?"warn":"muted"}">Sisa stok ${esc(fmtStok(r))}</span>`);
+        }
+    }
+    document.getElementById("rkTotal").innerHTML=parts.join("");
+    const notes=rkMethod==="CASH"&&valid?[total,...CASH_NOTES.filter(v=>v>total)].slice(0,6):[];
+    document.getElementById("rkCashChips").innerHTML=notes.map((v,i)=>`<button type="button" data-paid="${v}">${i===0?"Uang pas":money(v)}</button>`).join("");
+}
+
+document.getElementById("rokokName").addEventListener("input",()=>{applyStoredPrice(false);renderRokokChips();syncRokokForm();});
+document.getElementById("rokokPrice").addEventListener("input",()=>{rkPriceAuto=false;updateRkSummary();});
+document.getElementById("rokokQty").addEventListener("input",updateRkSummary);
+document.getElementById("rokokPaid").addEventListener("input",updateRkSummary);
+document.getElementById("rkUnitSeg").addEventListener("click",event=>{
+    const button=event.target.closest("button[data-unit]");if(!button)return;
+    rkUnit=button.dataset.unit;applyStoredPrice(true);syncRokokForm();
+});
+document.getElementById("rkMethodSeg").addEventListener("click",event=>{
+    const button=event.target.closest("button[data-method]");if(!button)return;
+    rkMethod=button.dataset.method;
+    if(rkMethod!=="CASH")document.getElementById("rokokPaid").value="";
+    syncRokokForm();
+});
+document.querySelector("#rokokForm .stepper").addEventListener("click",event=>{
+    const button=event.target.closest("button[data-step]");if(!button)return;
+    const input=document.getElementById("rokokQty");
+    input.value=Math.max(1,(parseInt(input.value,10)||0)+Number(button.dataset.step));
+    updateRkSummary();
+});
+document.getElementById("rkChips").addEventListener("click",event=>{
+    const button=event.target.closest("button[data-id]");if(!button)return;
+    const r=rokok.find(x=>x.id===button.dataset.id);if(!r)return;
+    document.getElementById("rokokName").value=r.name;
+    applyStoredPrice(true);renderRokokChips();syncRokokForm();
+    document.getElementById("rokokQty").focus();
+    document.getElementById("rokokQty").select();
+});
+document.getElementById("rkCashChips").addEventListener("click",event=>{
+    const button=event.target.closest("button[data-paid]");if(!button)return;
+    document.getElementById("rokokPaid").value=button.dataset.paid;
+    updateRkSummary();
+});
+
+document.getElementById("rokokForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const el=rkEls();
+    const name=el.name.value.trim();
+    const qty=Number(el.qty.value);
+    const price=Number(el.price.value);
+    if(!name||!Number.isInteger(qty)||qty<1||!Number.isFinite(price)||price<1){alert("Isi merek rokok, jumlah, dan harga dengan benar.");return;}
+    const total=price*qty;
+    const paid=rkMethod==="CASH"?Number(el.paid.value)||0:0;
+    if(paid>0&&paid<total){alert(`Uang diterima kurang ${money(total-paid)}.`);el.paid.focus();return;}
+    const existing=findRokok(name);
+    if(rkUnit==="SETENGAH_BUNGKUS"&&((existing?.isi||DEFAULT_ISI)%2!==0)){alert("Setengah bungkus hanya bisa dijual jika isi bungkusnya genap.");return;}
+    if(existing&&existing.stok!==null){
+        const need=rkUnit==="BUNGKUS"?qty*existing.isi:(rkUnit==="SETENGAH_BUNGKUS"?qty*(existing.isi/2):qty);
+        if(need>existing.stok){alert(`Stok ${existing.name} tidak cukup. Sisa ${fmtStok(existing)}.\nKoreksi stok di "Daftar merek" kalau hitungannya salah.`);return;}
+    }
+    const unit=rkUnit, method=rkMethod;
+    let priceChanged=false, savedName=name;
+    const ok=transact(()=>{
+        let r=findRokok(name);
+        if(!r){r={id:newId(),name,isi:DEFAULT_ISI,            hargaBatang:null,hargaBungkus:null,hargaSetengah:null,stok:null};rokok.push(r);}
+        const key=unit==="BATANG"?"hargaBatang":(unit==="SETENGAH_BUNGKUS"?"hargaSetengah":"hargaBungkus");
+        if(r[key]!=null&&r[key]!==price)priceChanged=true;
+        r[key]=price;
+        const batang=unit==="BUNGKUS"?qty*r.isi:(unit==="SETENGAH_BUNGKUS"?qty*(r.isi/2):qty);
+        const deducted=r.stok!==null?batang:0;
+        if(deducted)r.stok-=deducted;
+        savedName=r.name;
+        const now=new Date();
+        data.sales.push({id:newId(),rokokId:r.id,name:r.name,qty,unit,price,total,method,date:localDateKey(now),time:now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}),isRokok:true,stokDipotong:deducted});
+    });
+    if(!ok)return;
+    el.name.value="";el.price.value="";el.qty.value="1";el.paid.value="";
+    rkPriceAuto=false;rkMethod="CASH";
+    syncRokokForm();render();
+    showToast(`Dicatat: ${num(qty)} ${unitShort(unit)} ${savedName} · ${money(total)}`+(paid>0?` · kembalian ${money(paid-total)}`:"")+(priceChanged?" · harga baru diingat":""));
+    el.name.focus();
+});
+
+/* ---------- daftar merek rokok ---------- */
+function resetMasterForm(){
+    rkEditingId=null;
+    document.getElementById("rokokMasterForm").reset();
+    document.getElementById("rmIsi").value=DEFAULT_ISI;
+    document.getElementById("rmSubmit").textContent="Simpan merek";
+    document.getElementById("rmCancel").hidden=true;
+}
+document.getElementById("rmCancel").addEventListener("click",resetMasterForm);
+document.getElementById("rokokMasterForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const name=document.getElementById("rmName").value.trim();
+    const isi=Number(document.getElementById("rmIsi").value);
+    const rawBtg=document.getElementById("rmBatang").value.trim();
+    const rawHalf=document.getElementById("rmSetengah").value.trim();
+    const rawBks=document.getElementById("rmBungkus").value.trim();
+    const rawStok=document.getElementById("rmStok").value.trim();
+    const stockProvided=rawStok!=="";
+    const hb=rawBtg===""?null:Number(rawBtg);
+    const hh=rawHalf===""?null:Number(rawHalf);
+    const hk=rawBks===""?null:Number(rawBks);
+    const add=rawStok===""?0:Number(rawStok);
+    if(!name){alert("Isi nama merek rokok.");return;}
+    if(!Number.isInteger(isi)||isi<1||isi>100){alert("Isi per bungkus harus angka bulat 1–100.");return;}
+    if((hb!==null&&(!Number.isFinite(hb)||hb<1))||(hh!==null&&(!Number.isFinite(hh)||hh<1))||(hk!==null&&(!Number.isFinite(hk)||hk<1))){alert("Harga harus angka minimal 1, atau dikosongkan.");return;}
+    if(!Number.isInteger(add)||add<0){alert("Tambah stok harus angka bulat (jumlah bungkus).");return;}
+    const editing=rkEditingId?rokok.find(r=>r.id===rkEditingId):null;
+    const duplicate=rokok.find(r=>sameName(r.name,name)&&r.id!==editing?.id);
+    if(editing&&duplicate){alert("Nama merek itu sudah ada di daftar.");return;}
+    const target=editing||duplicate;
+    const ok=transact(()=>{
+        if(target){
+            target.isi=isi;
+            if(editing){target.name=name;target.hargaBatang=hb;target.hargaSetengah=hh;target.hargaBungkus=hk;}
+            else{if(hb!==null)target.hargaBatang=hb;if(hh!==null)target.hargaSetengah=hh;if(hk!==null)target.hargaBungkus=hk;}
+            if(stockProvided&&(target.stok===null||add>0))target.stok=(target.stok??0)+add*isi;
+        }else{
+            rokok.push({id:newId(),name,isi,hargaBatang:hb,hargaSetengah:hh,hargaBungkus:hk,stok:stockProvided?add*isi:null});
+        }
+    });
+    if(!ok)return;
+    resetMasterForm();
+    applyStoredPrice(false);
+    render();
+    const shown=target?target.name:name;
+    showToast(target?(add>0?`${shown}: diperbarui, stok +${add} bks.`:`${shown} diperbarui.`):`${shown} ditambahkan ke daftar merek.`);
+});
+document.getElementById("rokokMasterList").addEventListener("click",event=>{
+    const button=event.target.closest("button[data-act]");if(!button)return;
+    const r=rokok.find(x=>x.id===button.dataset.id);if(!r)return;
+    if(button.dataset.act==="edit"){
+        rkEditingId=r.id;
+        document.getElementById("rmName").value=r.name;
+        document.getElementById("rmIsi").value=r.isi;
+        document.getElementById("rmBatang").value=r.hargaBatang??"";
+        document.getElementById("rmSetengah").value=r.hargaSetengah??"";
+        document.getElementById("rmBungkus").value=r.hargaBungkus??"";
+        document.getElementById("rmStok").value="";
+        document.getElementById("rmSubmit").textContent="Simpan perubahan";
+        document.getElementById("rmCancel").hidden=false;
+        document.getElementById("rmName").focus();
+    }else if(button.dataset.act==="stok"){
+        correctRokokStock(r);
+    }else if(button.dataset.act==="del"){
+        if(!confirm(`Hapus merek "${r.name}" dari daftar? Riwayat penjualannya tetap tersimpan.`))return;
+        if(transact(()=>{rokok=rokok.filter(x=>x.id!==r.id);})){
+            if(rkEditingId===r.id)resetMasterForm();
+            render();showToast("Merek dihapus dari daftar.");
+        }
+    }
+});
+function correctRokokStock(r){
+    const bksInput=prompt(`Hitung sisa stok ${r.name} (isi ${r.isi} btg/bks).\n\nJumlah BUNGKUS utuh yang tersisa:\n(kosongkan kalau tidak mau menghitung stok merek ini)`,r.stok===null?"":String(Math.floor(r.stok/r.isi)));
+    if(bksInput===null)return;
+    if(bksInput.trim()===""){
+        if(r.stok===null)return;
+        if(!confirm(`Berhenti menghitung stok ${r.name}?`))return;
+        if(transact(()=>{rokok.find(x=>x.id===r.id).stok=null;})){render();showToast(`Stok ${r.name} tidak dihitung lagi.`);}
+        return;
+    }
+    const bks=Number(bksInput);
+    if(!Number.isInteger(bks)||bks<0){alert("Jumlah bungkus harus angka bulat nol atau lebih.");return;}
+    const btgInput=prompt(`Sisa BATANG lepasan ${r.name} dari bungkus yang sudah dibuka (0–${r.isi-1}):`,r.stok===null?"0":String(r.stok%r.isi));
+    if(btgInput===null)return;
+    const btg=Number(btgInput.trim()||0);
+    if(!Number.isInteger(btg)||btg<0||btg>=r.isi){alert(`Batang lepasan harus angka bulat 0 sampai ${r.isi-1}.`);return;}
+    if(transact(()=>{rokok.find(x=>x.id===r.id).stok=bks*r.isi+btg;})){
+        render();showToast(`Stok ${r.name} sekarang ${fmtStok(rokok.find(x=>x.id===r.id))}.`);
+    }
+}
+
+/* ---------- barang ---------- */
+document.getElementById("itemForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const name=document.getElementById("itemName").value.trim();
+    const qty=Number(document.getElementById("itemQty").value);
+    const price=Number(document.getElementById("itemPrice").value);
+    if(!name||!Number.isInteger(qty)||qty<1||!Number.isFinite(price)||price<1){alert("Isi nama, jumlah stok, dan harga jual dengan benar.");return;}
+    const existing=data.items.find(item=>sameName(item.name,name));
+    const previous=existing?{qty:existing.qty,price:existing.price}:null;
+    if(existing){existing.qty=Number(existing.qty)+qty;existing.price=price;}
+    else data.items.push({id:Date.now()+""+Math.random().toString(16).slice(2),name,qty,price});
+    if(!saveData()){
+        if(existing){existing.qty=previous.qty;existing.price=previous.price;}
+        else data.items.pop();
+        return;
+    }
+    event.target.reset();render();showToast(existing?"Stok barang berhasil ditambahkan.":"Barang berhasil disimpan.");
+});
+
+document.getElementById("saleForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const item=data.items.find(entry=>entry.id===document.getElementById("saleItem").value);
+    const qty=Number(document.getElementById("saleQty").value);
+    const method=document.getElementById("saleMethod").value;
+    if(!item){alert("Pilih barang yang akan dijual.");return;}
+    if(!Number.isInteger(qty)||qty<1){alert("Jumlah penjualan harus minimal 1.");return;}
+    if(qty>Number(item.qty)){alert("Stok tidak mencukupi.");return;}
+    const now=new Date();
+    const previousQty=item.qty;
+    item.qty=Number(item.qty)-qty;
+    data.sales.push({id:Date.now()+""+Math.random().toString(16).slice(2),itemId:item.id,name:item.name,qty,price:Number(item.price),total:Number(item.price)*qty,method,date:localDateKey(now),time:now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})});
+    if(!saveData()){
+        item.qty=previousQty;
+        data.sales.pop();
+        return;
+    }
+    document.getElementById("saleQty").value="";render();showToast("Penjualan dicatat dan stok dikurangi.");
+});
+
+/* ---------- laporan ---------- */
+function filteredSales(){
+    const from=document.getElementById("reportFrom").value;
+    const to=document.getElementById("reportTo").value;
+    const method=document.getElementById("reportMethod").value;
+    const type=document.getElementById("reportType").value;
+    if(from&&to&&from>to)return null;
+    return data.sales.filter(sale=>(!from||sale.date>=from)&&(!to||sale.date<=to)&&(method==="ALL"||sale.method===method)&&(type==="ALL"||(type==="ROKOK")===!!sale.isRokok));
+}
+function renderReport(){
+    const sales=filteredSales();
+    const list=document.getElementById("reportList");
+    if(sales===null){
+        document.getElementById("reportSummary").textContent="Rentang tanggal tidak valid: tanggal awal harus sebelum tanggal akhir.";
+        list.innerHTML='<tr><td colspan="6" class="empty">Periksa rentang tanggal.</td></tr>';
+        return;
+    }
+    const total=sales.reduce((sum,sale)=>sum+Number(sale.total||0),0);
+    const cash=sales.filter(sale=>sale.method==="CASH").reduce((sum,sale)=>sum+Number(sale.total||0),0);
+    const qris=total-cash;
+    const rokokTotal=sales.filter(sale=>sale.isRokok).reduce((sum,sale)=>sum+Number(sale.total||0),0);
+    document.getElementById("reportSummary").textContent=`${sales.length} transaksi · Total ${money(total)} · Cash ${money(cash)} · QRIS ${money(qris)} · Barang ${money(total-rokokTotal)} · Rokok ${money(rokokTotal)}`;
+    list.innerHTML=sales.length?sales.slice().reverse().map(sale=>`<tr><td>${esc(sale.date)}</td><td>${esc(sale.time)}</td><td><strong>${esc(sale.name)}</strong>${saleTag(sale)}</td><td>${qtyLabel(sale)}</td><td>${esc(sale.method)}</td><td>${money(sale.total)}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Tidak ada penjualan pada filter ini.</td></tr>';
+}
+function editItem(id){
+    const item=data.items.find(entry=>entry.id===id);if(!item)return;
+    const name=prompt("Nama barang:",item.name);
+    if(name===null)return;
+    const cleanName=name.trim();
+    const priceInput=prompt("Harga jual per unit:",item.price);
+    if(priceInput===null)return;
+    const price=Number(priceInput);
+    if(!cleanName||!Number.isFinite(price)||price<1){alert("Nama dan harga jual harus diisi dengan benar.");return;}
+    const duplicate=data.items.find(entry=>entry.id!==id&&sameName(entry.name,cleanName));
+    if(duplicate){alert("Nama barang tersebut sudah digunakan.");return;}
+    const previous={name:item.name,price:item.price};
+    item.name=cleanName;item.price=price;
+    if(saveData()){render();showToast("Data barang berhasil diperbarui.");}
+    else{item.name=previous.name;item.price=previous.price;}
+}
+function adjustStock(id){
+    const item=data.items.find(entry=>entry.id===id);if(!item)return;
+    const input=prompt(`Jumlah stok yang ditambahkan untuk ${item.name}:`,"1");
+    if(input===null)return;
+    const amount=Number(input);
+    if(!Number.isInteger(amount)||amount<1){alert("Jumlah stok harus angka bulat minimal 1.");return;}
+    const previous=item.qty;
+    item.qty=Number(item.qty)+amount;
+    if(saveData()){render();showToast(`${amount} stok berhasil ditambahkan.`);}
+    else item.qty=previous;
+}
+function deleteItem(id){
+    const item=data.items.find(entry=>entry.id===id);if(!item)return;
+    if(!confirm(`Hapus barang "${item.name}" dari daftar stok? Riwayat penjualan tetap tersimpan.`))return;
+    const previous=data.items;
+    data.items=data.items.filter(entry=>entry.id!==id);
+    if(saveData()){render();showToast("Barang dihapus dari stok.");}
+    else data.items=previous;
+}
+function undoSale(id){
+    const index=data.sales.findIndex(sale=>sale.id===id);if(index<0)return;
+    const sale=data.sales[index];
+    if(sale.isRokok){
+        const r=rokok.find(x=>x.id===sale.rokokId);
+        const restore=r&&r.stok!==null&&Number(sale.stokDipotong)>0?Number(sale.stokDipotong):0;
+        if(!confirm(`Batalkan penjualan ${sale.name} (${qtyLabel(sale)})?${restore?" Stok rokok akan dikembalikan.":""}`))return;
+        const ok=transact(()=>{
+            if(restore)rokok.find(x=>x.id===sale.rokokId).stok+=restore;
+            data.sales=data.sales.filter(s=>s.id!==id);
+        });
+        if(ok){render();showToast(restore?"Penjualan rokok dibatalkan dan stok dikembalikan.":"Penjualan rokok dibatalkan.");}
+        return;
+    }
+    if(!confirm(`Batalkan penjualan ${sale.name} (${sale.qty} unit)? Stok akan dikembalikan.`))return;
+    const item=data.items.find(entry=>entry.id===sale.itemId);
+    const previousQty=item?.qty;
+    if(item)item.qty=Number(item.qty)+Number(sale.qty);
+    data.sales.splice(index,1);
+    if(saveData()){render();showToast("Penjualan dibatalkan dan stok dikembalikan.");}
+    else{
+        if(item)item.qty=previousQty;
+        data.sales.splice(index,0,sale);
+    }
+}
+
+/* ---------- cadangan ---------- */
+function downloadBackup(){
+    const backup={app:"ARENA 27 NET STOK",version:1,exportedAt:new Date().toISOString(),data,lowStockLimit,rokok};
+    const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download=`cadangan-stok-arena27-${localDateKey()}.json`;
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+    showToast("Cadangan stok berhasil diunduh.");
+}
+
+async function restoreBackup(event){
+    const file=event.target.files?.[0];
+    event.target.value="";
+    if(!file)return;
+    try{
+        const backup=JSON.parse(await file.text());
+        if(backup.app!=="ARENA 27 NET STOK"||backup.version!==1||!Array.isArray(backup.data?.items)||!Array.isArray(backup.data?.sales)){
+            throw new Error("File bukan cadangan stok Arena 27 Net yang valid.");
+        }
+        const validItems=backup.data.items.every(item=>item&&typeof item.id==="string"&&typeof item.name==="string"&&item.name.trim()&&Number.isInteger(Number(item.qty))&&Number(item.qty)>=0&&Number.isFinite(Number(item.price))&&Number(item.price)>=1);
+        const validSales=backup.data.sales.every(sale=>sale&&typeof sale.id==="string"&&typeof sale.name==="string"&&Number.isInteger(Number(sale.qty))&&Number(sale.qty)>0&&Number.isFinite(Number(sale.price))&&Number(sale.price)>=1&&Number.isFinite(Number(sale.total))&&Number(sale.total)>=0&&["CASH","QRIS"].includes(sale.method)&&/^\d{4}-\d{2}-\d{2}$/.test(sale.date));
+        const limit=Number(backup.lowStockLimit);
+        if(!validItems||!validSales||!Number.isInteger(limit)||limit<0)throw new Error("Isi data cadangan tidak valid.");
+        const backupRokok=Array.isArray(backup.rokok)?backup.rokok:Array.isArray(backup.rokokList)?backup.rokokList:null;
+        if(!confirm(`Pulihkan ${backup.data.items.length} barang, ${backup.data.sales.length} transaksi${backupRokok?`, dan ${backupRokok.length} merek rokok`:""}? Data stok yang ada akan diganti.`))return;
+        const previous={data,limit:lowStockLimit,rokok,storage:[STORAGE_KEY,LOW_STOCK_KEY,ROKOK_KEY].map(key=>[key,localStorage.getItem(key)])};
+        data={items:backup.data.items,sales:backup.data.sales};
+        lowStockLimit=limit;
+        if(backupRokok)rokok=normalizeRokok(backupRokok);
+        try{
+            localStorage.setItem(LOW_STOCK_KEY,String(lowStockLimit));
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+            localStorage.setItem(ROKOK_KEY,JSON.stringify(rokok));
+        }catch(error){
+            data=previous.data;
+            lowStockLimit=previous.limit;
+            rokok=previous.rokok;
+            previous.storage.forEach(([key,value])=>{
+                try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}catch(rollbackError){}
+            });
+            throw new Error("Cadangan gagal dipulihkan; data aktif tetap dipertahankan.");
+        }
+        resetMasterForm();
+        render();
+        showToast("Cadangan stok berhasil dipulihkan.");
+    }catch(error){alert(error.message||"File cadangan tidak dapat dibaca.");}
+}
+document.getElementById("lowStockLimit").addEventListener("change",event=>{
+    const value=Number(event.target.value);
+    if(!Number.isInteger(value)||value<0){
+        alert("Batas stok harus berupa angka bulat nol atau lebih.");
+        event.target.value=lowStockLimit;
+        return;
+    }
+    try{
+        localStorage.setItem(LOW_STOCK_KEY,String(value));
+        lowStockLimit=value;
+    }catch(error){
+        alert("Batas stok gagal disimpan di browser.");
+        event.target.value=lowStockLimit;
+        return;
+    }
+    render();
+});
+document.getElementById("itemSearch").addEventListener("input",render);
+document.getElementById("exportBackup").addEventListener("click",downloadBackup);
+document.getElementById("stockBackupFile").addEventListener("change",restoreBackup);
+document.getElementById("reportFrom").value=localDateKey();
+document.getElementById("reportTo").value=localDateKey();
+document.getElementById("reportForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    renderReport();
+});
+document.getElementById("reportMethod").addEventListener("change",renderReport);
+document.getElementById("reportType").addEventListener("change",renderReport);
+document.getElementById("downloadReport").addEventListener("click",()=>{
+    const sales=filteredSales();
+    if(sales===null){alert("Rentang tanggal tidak valid.");return;}
+    const quote=value=>'"'+String(value??"").replaceAll('"','""')+'"';
+    const rows=[["Tanggal","Waktu","Jenis","Barang","Jumlah","Satuan","Harga","Pembayaran","Total"],...sales.map(sale=>[sale.date,sale.time,sale.isRokok?"Rokok":"Barang",sale.name,sale.qty,sale.isRokok?(saleUnit(sale)==="BATANG"?"Batang":(saleUnit(sale)==="SETENGAH_BUNGKUS"?"½ Bungkus":"Bungkus")):"Unit",sale.price,sale.method,sale.total])];
+    const csv="\ufeff"+rows.map(row=>row.map(quote).join(",")).join("\r\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download=`laporan-penjualan-${document.getElementById("reportFrom").value||"semua"}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+});
+syncRokokForm();
+render();
+</script>
+</body>
+</html>
